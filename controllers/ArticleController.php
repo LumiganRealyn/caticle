@@ -10,6 +10,7 @@ use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use Yii;
+use yii\web\UploadedFile;
 
 /**
  * ArticleController implements the CRUD actions for Article model.
@@ -55,9 +56,12 @@ class ArticleController extends Controller
         $searchModel = new ArticleBlog();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+
+
         ]);
     }
 
@@ -84,7 +88,11 @@ class ArticleController extends Controller
         $model = new Article();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+            if ($model->load($this->request->post())) {
+
+                $model->imageFile = UploadedFile::getInstance($model, 'imageFile');
+
+                if ($model->uploadAndSave())
                 return $this->redirect(['view', 'slug' => $model->slug]);
             }
         } else {
@@ -107,17 +115,50 @@ class ArticleController extends Controller
     {
         $model = $this->findModel($slug);
         if($model->created_by !== Yii::$app->user->id){
-            throw new ForbiddenHttpException("Wala ka permission para mag update aning article. Kinsa ba diay ka");
+            throw new ForbiddenHttpException("You don't have the permission to update this! ");
         }
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+        // Handle form submission
+        if ($model->load(Yii::$app->request->post())) {
+            // Retrieve the uploaded image file from the request
+            $model->imageFile = UploadedFile::getInstance($model, 'imageFile');
+
+
+            // Check if a new image file was uploaded
+            if ($model->imageFile !== null) {
+                // Generate a unique filename for the uploaded file
+                $filename = $model->imageFile->baseName . '.' . $model->imageFile->extension;
+
+                // Save the uploaded file to the server
+                $model->imageFile->saveAs('uploads/' . $filename);
+
+
+
+                // Update the 'image' attribute of the article model with the new filename
+                $model->setAttribute('image', $filename);
+
+                // Update the 'image' attribute of the article model with the new filename
+            }
+
+            // Save the updated article model to the database
+            $model->save();
+
+            // Redirect the user to the updated article view page
             return $this->redirect(['view', 'slug' => $model->slug]);
         }
 
+        // Render the update form view
         return $this->render('update', [
             'model' => $model,
         ]);
     }
+
+
+
+
+
+
+
 
     /**
      * Deletes an existing Article model.
@@ -130,7 +171,7 @@ class ArticleController extends Controller
     {
         $model = $this->findModel($slug);
         if($model->created_by !== Yii::$app->user->id){
-            throw new ForbiddenHttpException("Luh! ning gara ay. Wala gane ka permission aning article. Nganong kulit man kaayo ka? Imuha ni?");
+            throw new ForbiddenHttpException("You don't have the permission to delete this!");
         }
         $model->delete();
 

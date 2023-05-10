@@ -18,7 +18,7 @@ class ArticleBlog extends Article
     {
         return [
             [['id', 'created_at', 'updated_at', 'created_by', 'updated_by'], 'integer'],
-            [['title', 'slug', 'body'], 'safe'],
+            [['title', 'slug','image', 'body'], 'safe'],
         ];
     }
 
@@ -29,6 +29,7 @@ class ArticleBlog extends Article
     {
         // bypass scenarios() implementation in the parent class
         return Model::scenarios();
+
     }
 
     /**
@@ -65,10 +66,12 @@ class ArticleBlog extends Article
             'updated_by' => $this->updated_by,
         ]);
 
-        $query->andFilterWhere(['like', 'title', $this->title])
-            ->andFilterWhere(['like', 'slug', $this->slug])
-            ->andFilterWhere(['like', 'body', $this->body]);
+        $query->andFilterWhere(['like', 'CONCAT(title, slug, body)', $this->title])
+            ->andFilterWhere(['=', 'created_by', \Yii::$app->user->getId()]);
+
 
         return $dataProvider;
+
+
     }
 }

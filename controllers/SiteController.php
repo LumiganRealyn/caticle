@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\models\Article;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
@@ -10,6 +11,10 @@ use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\SignupForm;
 use app\models\ContactForm;
+use yii\behaviors\BlameableBehavior;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
+
 
 class SiteController extends Controller
 {
@@ -36,6 +41,16 @@ class SiteController extends Controller
                     'logout' => ['post'],
                 ],
             ],
+
+                TimestampBehavior::class,
+                [
+                    'class' => BlameableBehavior::class,
+                    'updatedByAttribute' => false
+                ],
+                [
+                    'class' => SluggableBehavior::class,
+                    'attribute' => 'title'
+                ]
         ];
     }
 
@@ -61,8 +76,37 @@ class SiteController extends Controller
      * @return string
      */
     public function actionIndex()
-    {
-        return $this->render('index');
+   {
+//        $model = new Article();
+//        $data = $model->find()->all();
+//        return $this->render('index',[
+//            'data' => $data
+//        ]);
+        $model = new Article();
+        $currentUser = Yii::$app->user->identity;
+
+        if ($currentUser != null) {
+            $count = $model->find()->where(['created_by' => $currentUser->id])->count();
+            $count = intval($count);
+            $counts = $model->find()->count();
+            $counts - intval($counts);
+
+            $data = $model->find()->orderBy(['created_at' => SORT_DESC])->all();
+            $datas = [];
+
+        }else{
+            $data = [];
+            $count = 0;
+            $datas = $model->find()->orderBy(['created_at' => SORT_DESC])->all();
+            $counts = 0;
+        }
+
+        return $this->render('index', [
+            'data' => $data,
+            'total_records' => $count,
+            'datas' => $datas,
+            'total_records1' => $counts,
+            ]);
     }
 
     /**
